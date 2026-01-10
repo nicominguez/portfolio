@@ -1,5 +1,5 @@
 import streamlit as st
-
+import pandas as pd
 from projects.blackjack.src.main import run_sim
 from projects.blackjack.src.static.player import RandomStrategyPlayer, BasicStrategyPlayer, ChartPlayer1, ChartPlayer2, RCHighLowPlayer
 from projects.blackjack.src.static.rules import HouseRules
@@ -10,118 +10,146 @@ st.set_page_config(
     layout="wide",
 )
 
-# Title
-st.title("Blackjack")
-st.markdown("Simulate different blackjack player strategies and analyze their performance.")
-
-# Simulation Settings Section
-st.header("Simulation Settings")
-
-st.subheader(":blue[Player 1]", divider="blue")
-
-col1, col2, col3 = st.columns(3)
-
-player_options = {
+STRATEGY_OPTIONS = {
     "Random Strategy": RandomStrategyPlayer,
     "Basic Hit/Stand": BasicStrategyPlayer,
     "Chart Player 1": ChartPlayer1,
     "Chart Player 2": ChartPlayer2,
     "Running Count High Low": RCHighLowPlayer,
 }
-with col1:
-    selected_player_name = st.radio(
-        "Select Player Strategy",
-        options=list(player_options.keys()),
-        help="Choose the strategy the player will use during the simulation"
-    )
 
-rule_options = {
+RULE_OPTIONS = {
     "Standard House Rules": HouseRules(),
 }
-with col2:
-    selected_rule_name = st.radio(
-        "Select House Rules",
-        options=list(rule_options.keys()),
-        help="Select the house rules for the simulation"
-    )
 
-with col3:
-    num_hands = st.slider(
-        "Number of Hands to Simulate",
-        min_value=10,
-        max_value=10000,
-        value=1000,
-        step=10,
-        help="How many hands should each player play?"
-    )
+PLAYER_COLORS = ["blue", "red", "green", "orange"]
+
+if "num_players" not in st.session_state:
+    st.session_state.num_players = 1
+
+def render_player_settings(player_num):
+    color = PLAYER_COLORS[player_num - 1]
+    st.subheader(f":{color}[Player {player_num}]", divider=color)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        strategy = st.selectbox(
+            "Strategy",
+            options=list(STRATEGY_OPTIONS.keys()),
+            key=f"strategy_{player_num}",
+            help="Choose the strategy the player will use"
+        )
+    
+    with col2:
+        rules = st.selectbox(
+            "House Rules",
+            options=list(RULE_OPTIONS.keys()),
+            key=f"rules_{player_num}",
+            help="Select the house rules"
+        )
+    
+    return strategy, rules
+
+def render_detailed_metrics(result, bankroll_history, color):
+    with st.expander(f":{color}[Detailed Metrics]"):
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.markdown(f"**Final Bankroll**  \n${bankroll_history[-1]:.0f}")
+        
+        with col2:
+            st.markdown(f"**Starting Bankroll**  \n${bankroll_history[0]:.0f}")
+        
+        with col3:
+            st.markdown(f"**Peak Bankroll**  \n${max(bankroll_history):.0f}")
+        
+        with col4:
+            st.markdown(f"**Minimum Bankroll**  \n${min(bankroll_history):.0f}")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.markdown(f"**Total Hands**  \n{result.get('total_games', 0)}")
+        
+        with col2:
+            win_rate = (result.get("wins", 0) / result.get("total_games", 1)) * 100
+            st.markdown(f"**Win Rate**  \n{win_rate:.1f}%")
+        
+        with col3:
+            st.markdown(f"**Wins**  \n{result.get('wins', 0)}")
+        
+        with col4:
+            st.markdown(f"**Losses**  \n{result.get('losses', 0)}")
+
+st.title("Blackjack")
+st.markdown("Simulate different blackjack player strategies and analyze their performance.")
+
+st.header("Simulation Settings")
+
+player_configs = []
+for i in range(1, st.session_state.num_players + 1):
+    strategy, rules = render_player_settings(i)
+    player_configs.append((strategy, rules))
+
+if st.session_state.num_players < 4:
+    if st.button("Add Player", type="tertiary", use_container_width=True):
+        st.session_state.num_players += 1
+        st.rerun()
 
 st.divider()
 
-# Start simulation
+num_hands = st.slider(
+    "Number of Hands to Simulate",
+    min_value=10,
+    max_value=10000,
+    value=1000,
+    step=10,
+    help="How many hands should each player play?"
+)
+
 if st.button("Run Simulation", key="run_sim_button", type="primary", use_container_width=True):
-    player = player_options[selected_player_name]()
-    initial_bankroll = player.bankroll
-    rules = rule_options[selected_rule_name]
+    players = [STRATEGY_OPTIONS[strategy]() for strategy, _ in player_configs]
+    rules = RULE_OPTIONS[player_configs[0][1]]
     
     with st.spinner("Running simulation..."):
-        results = run_sim(
-            players=[player],
-            rules=rules,
-            num_hands=num_hands,
-        )
+        results = run_sim(players=players, rules=rules, num_hands=num_hands)
     
     st.header("Simulation Results")
     
-    if results:
-        result = results[0]
-        bankroll_history = result.get("bankroll_history", [])
+    if results and all(r.get("bankroll_history") for r in results):
+        max_len = max(len(r["bankroll_history"]) for r in results)
+        padded_data = {}
+        for i, r in enumerate(results):
+            history = r["bankroll_history"]
+            if len(history) < max_len:
+                history = history + [history[-1]] * (max_len - len(history))
+            padded_data[f"Player {i+1}"] = history
         
-        if bankroll_history:
-            st.line_chart(
-                bankroll_history,
-                use_container_width=True,
-            )
-            
-            initial_bankroll = 1000
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                st.metric("Final Bankroll", f"${bankroll_history[-1]:.0f}")
-            
-            with col2:
-                st.metric("Starting Bankroll", f"${initial_bankroll:.0f}")
-            
-            with col3:
-                max_bankroll = max(bankroll_history)
-                st.metric("Peak Bankroll", f"${max_bankroll:.0f}")
-            
-            with col4:
-                min_bankroll = min(bankroll_history)
-                st.metric("Minimum Bankroll", f"${min_bankroll:.0f}")
-            
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                st.metric("Total Hands", result.get("total_games", 0))
-            
-            with col2:
-                win_rate = (result.get("wins", 0) / result.get("total_games", 1)) * 100
-                st.metric("Win Rate", f"{win_rate:.1f}%")
-            
-            with col3:
-                st.metric("Wins", result.get("wins", 0))
-            
-            with col4:
-                st.metric("Losses", result.get("losses", 0))
-            
+        df = pd.DataFrame(padded_data)
+        st.line_chart(df, color=["#1f77b4", "#d62728", "#2ca02c", "#ff7f0e"][:len(results)], use_container_width=True)
+        
+        cols = st.columns(len(results))
+
+        profits = [r["bankroll_history"][-1] - r["bankroll_history"][0] for r in results]
+        best_player_idx = profits.index(max(profits))
+        
+        for i, (result, col, color) in enumerate(zip(results, cols, PLAYER_COLORS)):
+            bankroll_history = result["bankroll_history"]
             final_profit = bankroll_history[-1] - bankroll_history[0]
             profit_pct = (final_profit / bankroll_history[0]) * 100 if bankroll_history[0] > 0 else 0
+            win_rate = (result.get("wins", 0) / result.get("total_games", 1)) * 100
+            winner_mark = " 🏆" if i == best_player_idx else ""
             
-            if final_profit >= 0:
-                st.success(f"**Profit/Loss:** ${final_profit:+.0f} ({profit_pct:+.1f}%)")
-            else:
-                st.error(f"**Profit/Loss:** ${final_profit:+.0f} ({profit_pct:+.1f}%)")
-        else:
-            st.warning("No bankroll history generated. The player may have gone broke.")
+            with col:
+                st.markdown(f"### :{color}[Player {i+1}]")
+                st.metric("Win Rate", f"{win_rate:.1f}%")
+                
+                if final_profit >= 0:
+                    st.success(f"**Profit:** ${final_profit:+.0f} ({profit_pct:+.1f}%) {winner_mark}")
+                else:
+                    st.error(f"**Loss:** ${final_profit:+.0f} ({profit_pct:+.1f}%) {winner_mark}")
+                
+                render_detailed_metrics(result, bankroll_history, color)
     else:
         st.error("Simulation failed to produce results.")
