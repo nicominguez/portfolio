@@ -42,7 +42,6 @@ class Hand:
         if aces == 0:
             return False
         non_aces_sum = sum(card.hard_value for card in self.cards if card.rank != "A")
-        # count all aces as 1 first, then see if we can promote at least one ace to 11
         base = non_aces_sum + aces * 1
         for k in range(1, aces + 1):
             if base + 10 * k <= 21:
