@@ -60,7 +60,7 @@ def run_sim(
 
 def main():
     PARAMETERS = {
-        "players": [ChartPlayer2(), RCHighLowPlayer()],
+        "players": [ChartPlayer2(), RCHighLowPlayer(), QLearningPlayer()],
         "rules": HouseRules(),
         "num_hands": 100000,
         "BASE_BET": 5,

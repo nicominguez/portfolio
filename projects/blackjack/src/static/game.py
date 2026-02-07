@@ -135,22 +135,31 @@ class Game:
             "bankroll": self.player.bankroll,
         }
 
+    def _notify_player(self, result: dict):
+        if hasattr(self.player, 'learn_from_hand'):
+            self.player.learn_from_hand(result["outcome"])
+
     def play_round(self):
         self._check_reshuffle()
         self.bet = self.player.decide_bet_amount(curr_bet_unit=self.base_bet, shoe_length=len(self.shoe))
 
         result = self._check_bankrupcy()
         if result:
+            self._notify_player(result)
             return result
 
         player_hand, dealer_hand = self._deal()
 
         result = self._player_turn(player_hand, dealer_hand)
-        if result: 
+        if result:
+            self._notify_player(result)
             return result
         
         result = self._dealer_turn(player_hand, dealer_hand)
-        if result: 
+        if result:
+            self._notify_player(result)
             return result
         
-        return self._compare_hands(player_hand, dealer_hand)
+        result = self._compare_hands(player_hand, dealer_hand)
+        self._notify_player(result)
+        return result
