@@ -21,7 +21,6 @@ def run_sim(
         bankroll_history, cum_winrate = [], []
 
         for _ in range(num_hands):
-            game.bet = game.player.decide_bet_amount(curr_bet_unit=BASE_BET, shoe_length=len(game.shoe))
             outcome = game.play_round()
 
             if outcome.get("outcome") == "broke":
@@ -30,8 +29,6 @@ def run_sim(
                     f"Player bankroll: {game.player.bankroll}\nCurrent bet: {game.bet}\n\n\n"
                 )   
                 break
-            
-            game.bet = BASE_BET #resets
 
             if outcome.get("outcome") in ["win", "blackjack"]:
                 wins += 1
@@ -63,7 +60,7 @@ def run_sim(
 
 def main():
     PARAMETERS = {
-        "players": [RandomStrategyPlayer(), BasicStrategyPlayer(), ChartPlayer1(), ChartPlayer2(), RCHighLowPlayer()],
+        "players": [ChartPlayer2(), RCHighLowPlayer()],
         "rules": HouseRules(),
         "num_hands": 100000,
         "BASE_BET": 5,

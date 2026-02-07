@@ -10,6 +10,7 @@ class Game:
         self.rules: HouseRules = rules
         self.player: Player = player
         self.shoe: list = build_shoe(num_decks=self.rules.num_decks)
+        self.base_bet: int = bet
         self.bet: int = bet
 
     def _check_reshuffle(self) -> None:
@@ -125,6 +126,8 @@ class Game:
             self.player.bankroll -= self.bet * 0.5
         else:
             pass
+        self.bet = self.base_bet
+
         return {
             "outcome": result,
             "player": player_hand,
@@ -134,6 +137,7 @@ class Game:
 
     def play_round(self):
         self._check_reshuffle()
+        self.bet = self.player.decide_bet_amount(curr_bet_unit=self.base_bet, shoe_length=len(self.shoe))
 
         result = self._check_bankrupcy()
         if result:
