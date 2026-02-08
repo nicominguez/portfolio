@@ -14,18 +14,43 @@ st.set_page_config(
     layout="wide",
 )
 
-def _display_name_from_class(cls):
-    name = cls.__name__
-    pretty = re.sub(r'(?<!^)(?=[A-Z])', ' ', name).replace(' Player', '')
-    return pretty.strip()
+PLAYER_METADATA = {
+    "RandomStrategyPlayer": ("Random Strategy", 1),
+    "BasicStrategyPlayer": ("Basic Strategy", 2),
+    "ChartPlayer1": ("Chart Player 1", 3),
+    "ChartPlayer2": ("Chart Player 2", 4),
+    "RCHighLowPlayer": ("Running Count High Low", 5),
+    "QLearningPlayer": ("Q-Learning AI", 6),
+}
 
-player_classes = [
-    cls
-    for _, cls in inspect.getmembers(player_mod, inspect.isclass)
-    if issubclass(cls, player_mod.Player) and cls is not player_mod.Player and cls.__module__ == player_mod.__name__
-]
+def _build_strategy_options():
+    """Discover player classes and apply hand-curated metadata."""
+    player_classes = [
+        cls
+        for _, cls in inspect.getmembers(player_mod, inspect.isclass)
+        if issubclass(cls, player_mod.Player) and cls is not player_mod.Player and cls.__module__ == player_mod.__name__
+    ]
+    
+    options = {}
+    for cls in player_classes:
+        class_name = cls.__name__
+        if class_name in PLAYER_METADATA:
+            display_name, _ = PLAYER_METADATA[class_name]
+        else: # Fallback
+            display_name = re.sub(r'(?<!^)(?=[A-Z])', ' ', class_name).replace(' Player', '').strip()
+        options[display_name] = cls
+    
+    return options
 
-STRATEGY_OPTIONS = { _display_name_from_class(cls): cls for cls in player_classes }
+STRATEGY_OPTIONS = _build_strategy_options()
+
+STRATEGY_OPTIONS_SORTED = dict(
+    sorted(
+        STRATEGY_OPTIONS.items(),
+        key=lambda item: PLAYER_METADATA.get(item[1].__name__, (0, 0))[1],
+        reverse=True
+    )
+)
 
 RULE_OPTIONS = {
     "Standard House Rules": HouseRules(),
@@ -45,7 +70,7 @@ def render_player_settings(player_num):
     with col1:
         strategy = st.selectbox(
             "Strategy",
-            options=list(STRATEGY_OPTIONS.keys()),
+            options=list(STRATEGY_OPTIONS_SORTED.keys()),
             key=f"strategy_{player_num}",
             help="Choose the strategy the player will use"
         )
@@ -121,7 +146,7 @@ if st.button("Run Simulation", key="run_sim_button", type="primary", use_contain
     players = []
     model_path = Path(__file__).resolve().parent / "projects" / "blackjack" / "models" / "q_learning_player.pkl"
     for strategy, _ in player_configs:
-        cls = STRATEGY_OPTIONS[strategy]
+        cls = STRATEGY_OPTIONS_SORTED[strategy]
         if cls.__name__ == "QLearningPlayer":
             p = cls(bankroll=1000, training_mode=False, epsilon=0.0)
             p.load_model(str(model_path))
