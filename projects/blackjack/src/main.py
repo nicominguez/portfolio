@@ -1,6 +1,6 @@
-from static.player import *
-from static.rules import *
-from static.game import *
+from .static.player import *
+from .static.rules import *
+from .static.game import *
 
 def run_sim(
         players: list[Player],

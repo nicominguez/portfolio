@@ -15,13 +15,10 @@ st.set_page_config(
 )
 
 def _display_name_from_class(cls):
-    # Convert CamelCase to human-friendly words, keep numeric suffixes
     name = cls.__name__
-    # Insert spaces before capital letters and remove trailing 'Player'
     pretty = re.sub(r'(?<!^)(?=[A-Z])', ' ', name).replace(' Player', '')
     return pretty.strip()
 
-# Discover concrete Player subclasses automatically
 player_classes = [
     cls
     for _, cls in inspect.getmembers(player_mod, inspect.isclass)
@@ -121,7 +118,6 @@ num_hands = st.slider(
 )
 
 if st.button("Run Simulation", key="run_sim_button", type="primary", use_container_width=True):
-    # Instantiate selected strategies. Handle QLearningPlayer specially (load model, play mode).
     players = []
     model_path = Path(__file__).resolve().parent / "projects" / "blackjack" / "models" / "q_learning_player.pkl"
     for strategy, _ in player_configs:
@@ -130,7 +126,6 @@ if st.button("Run Simulation", key="run_sim_button", type="primary", use_contain
             p = cls(bankroll=1000, training_mode=False, epsilon=0.0)
             p.load_model(str(model_path))
         else:
-            # Pass bankroll as a common kwarg when supported
             try:
                 p = cls(bankroll=1000)
             except TypeError:

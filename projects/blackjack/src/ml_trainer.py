@@ -1,6 +1,6 @@
-from static.player import QLearningPlayer
-from static.game import Game
-from static.rules import HouseRules
+from .static.player import QLearningPlayer
+from .static.game import Game
+from .static.rules import HouseRules
 import time
 
 
