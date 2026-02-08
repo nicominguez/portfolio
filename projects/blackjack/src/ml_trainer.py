@@ -99,7 +99,7 @@ def train_q_learning_player(
 
 if __name__ == "__main__":
     trained_player = train_q_learning_player(
-        num_episodes=1000000,
+        num_episodes=100000,
         base_bet=5,
         save_path="../models/q_learning_player.pkl",
         verbose=True

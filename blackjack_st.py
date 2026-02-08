@@ -1,7 +1,11 @@
 import streamlit as st
 import pandas as pd
+from pathlib import Path
+import inspect
+import re
+
 from projects.blackjack.src.main import run_sim
-from projects.blackjack.src.static.player import RandomStrategyPlayer, BasicStrategyPlayer, ChartPlayer1, ChartPlayer2, RCHighLowPlayer
+from projects.blackjack.src.static import player as player_mod
 from projects.blackjack.src.static.rules import HouseRules
 
 st.set_page_config(
@@ -10,13 +14,21 @@ st.set_page_config(
     layout="wide",
 )
 
-STRATEGY_OPTIONS = {
-    "Random Strategy": RandomStrategyPlayer,
-    "Basic Hit/Stand": BasicStrategyPlayer,
-    "Chart Player 1": ChartPlayer1,
-    "Chart Player 2": ChartPlayer2,
-    "Running Count High Low": RCHighLowPlayer,
-}
+def _display_name_from_class(cls):
+    # Convert CamelCase to human-friendly words, keep numeric suffixes
+    name = cls.__name__
+    # Insert spaces before capital letters and remove trailing 'Player'
+    pretty = re.sub(r'(?<!^)(?=[A-Z])', ' ', name).replace(' Player', '')
+    return pretty.strip()
+
+# Discover concrete Player subclasses automatically
+player_classes = [
+    cls
+    for _, cls in inspect.getmembers(player_mod, inspect.isclass)
+    if issubclass(cls, player_mod.Player) and cls is not player_mod.Player and cls.__module__ == player_mod.__name__
+]
+
+STRATEGY_OPTIONS = { _display_name_from_class(cls): cls for cls in player_classes }
 
 RULE_OPTIONS = {
     "Standard House Rules": HouseRules(),
@@ -109,7 +121,22 @@ num_hands = st.slider(
 )
 
 if st.button("Run Simulation", key="run_sim_button", type="primary", use_container_width=True):
-    players = [STRATEGY_OPTIONS[strategy]() for strategy, _ in player_configs]
+    # Instantiate selected strategies. Handle QLearningPlayer specially (load model, play mode).
+    players = []
+    model_path = Path(__file__).resolve().parent / "projects" / "blackjack" / "models" / "q_learning_player.pkl"
+    for strategy, _ in player_configs:
+        cls = STRATEGY_OPTIONS[strategy]
+        if cls.__name__ == "QLearningPlayer":
+            p = cls(bankroll=1000, training_mode=False, epsilon=0.0)
+            p.load_model(str(model_path))
+        else:
+            # Pass bankroll as a common kwarg when supported
+            try:
+                p = cls(bankroll=1000)
+            except TypeError:
+                p = cls()
+        players.append(p)
+
     rules = RULE_OPTIONS[player_configs[0][1]]
     
     with st.spinner("Running simulation..."):

@@ -66,12 +66,18 @@ class Game:
             elif move == "surrender":
                 return self._round_result("surr_loss", None, None)
             elif move == "double":
-                card = self.shoe.pop()
-                player_hand.add(card)
-                if hasattr(self.player, '_update_running_count'):
-                    self.player._update_running_count(card)
-                self.bet *= 2
-                break
+                if self.player.bankroll >= self.bet * 2:
+                    card = self.shoe.pop()
+                    player_hand.add(card)
+                    if hasattr(self.player, '_update_running_count'):
+                        self.player._update_running_count(card)
+                    self.bet *= 2
+                    break
+                else:
+                    card = self.shoe.pop()
+                    player_hand.add(card)
+                    if hasattr(self.player, '_update_running_count'):
+                        self.player._update_running_count(card)
             elif move == "stand":
                 break
             else:

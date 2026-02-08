@@ -1,6 +1,6 @@
-from .static.player import *
-from .static.rules import *
-from .static.game import *
+from static.player import *
+from static.rules import *
+from static.game import *
 
 def run_sim(
         players: list[Player],
@@ -59,8 +59,11 @@ def run_sim(
 
 
 def main():
+    q_player = QLearningPlayer(training_mode=False)
+    q_player.load_model("../models/q_learning_player.pkl")
+
     PARAMETERS = {
-        "players": [ChartPlayer2(), RCHighLowPlayer(), QLearningPlayer()],
+        "players": [ChartPlayer2(), RCHighLowPlayer(), q_player],
         "rules": HouseRules(),
         "num_hands": 100000,
         "BASE_BET": 5,
