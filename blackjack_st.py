@@ -48,7 +48,7 @@ STRATEGY_OPTIONS_SORTED = dict(
     sorted(
         STRATEGY_OPTIONS.items(),
         key=lambda item: PLAYER_METADATA.get(item[1].__name__, (0, 0))[1],
-        reverse=True
+        reverse=False
     )
 )
 
